@@ -65,7 +65,6 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(ctx, error):
-    # تجاهل الأوامر غير الموجودة تماماً لمنع حدوث تكرار أو أخطاء في السجلات
     if isinstance(error, commands.CommandNotFound):
         return
     raise error
