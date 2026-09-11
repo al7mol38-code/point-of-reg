@@ -10,8 +10,12 @@ from discord.ext import commands
 OWNER_ROLE_ID = 1533463569683845160
 CO_OWNER_ROLE_ID = 1533463570564649121
 NEW_ROLE_ID = 1533463593201307780
+POINTS_ONLY_ROLE_ID = 1533463608145477712  # الرتبه الجديدة (إضافة نقاط فقط بدون تصفير)
 
-ALLOWED_ROLE_IDS = {OWNER_ROLE_ID, CO_OWNER_ROLE_ID, NEW_ROLE_ID}
+# صلاحيات تعديل النقاط (تشمل الرتبة الجديدة)
+ALLOWED_ROLE_IDS = {OWNER_ROLE_ID, CO_OWNER_ROLE_ID, NEW_ROLE_ID, POINTS_ONLY_ROLE_ID}
+
+# صلاحيات التصفير (مقتصرة على المالك والنائب فقط بدون الرتبه الجديدة)
 RESET_ALLOWED_ROLE_IDS = {CO_OWNER_ROLE_ID, OWNER_ROLE_ID}
 
 # آIDs الرومات المسموح للبوت التفاعل فيها
@@ -106,11 +110,11 @@ async def on_message(message: discord.Message):
             await message.channel.send("❌ لا يمكنك التعامل مع البوتات!")
             return
 
-        # عرض النقاط بالرد باستخدام كلمة "نقاط"
+        # عرض النقاط بالرد مع منشن لاسم العضو
         if content == "نقاط":
             user_pts = await get_points(target_member.id)
             embed = discord.Embed(
-                description=f"⭐ نقاط {target_member.mention}: **{user_pts}**",
+                description=f"⭐ نقاط العضو {target_member.mention}: **{user_pts}**",
                 color=discord.Color.purple()
             )
             await message.reply(embed=embed, mention_author=False)
@@ -153,13 +157,13 @@ async def help_command(ctx):
         title="📋 قائمة أوامر البوت الثاني",
         description=(
             "**بالرد على العضو (في الرومات المخصصة فقط):**\n"
-            "• `نقاط` ➜ عرض النقاط\n"
+            "• `نقاط` ➜ عرض النقاط مع المنشن\n"
             "• `نقاط+5` ➜ إضافة نقاط\n"
             "• `نقاط-2` ➜ خصم نقاط\n\n"
             "**الأوامر العامة (تبدأ بـ #):**\n"
-            "• `#قائمة` ➜ قائمة أفضل 10 أعضاء\n"
-            "• `#مسح` ➜ تصفير جميع نقاط البوت الثاني\n"
-            "• `#مسح @العضو` ➜ تصفير نقاط عضو معين"
+            "• `#قائمة` ➜ قائمة أفضل 10 أعضاء مع المنشن\n"
+            "• `#مسح` ➜ تصفير جميع نقاط البوت الثاني (للمصرحين فقط)\n"
+            "• `#مسح @العضو` ➜ تصفير نقاط عضو معين (للمصرحين فقط)"
         ),
         color=discord.Color.purple()
     )
@@ -180,9 +184,9 @@ async def top(ctx):
     description = ""
     for index, (user_id, points) in enumerate(users, start=1):
         member = ctx.guild.get_member(int(user_id))
-        name = member.display_name if member else f"<@{user_id}>"
+        mention_name = member.mention if member else f"<@{user_id}>"
         medal = "🥇" if index == 1 else "🥈" if index == 2 else "🥉" if index == 3 else f"**{index}.**"
-        description += f"{medal} {name} — ⭐ **{points}** نقطة\n"
+        description += f"{medal} {mention_name} — ⭐ **{points}** نقطة\n"
 
     embed = discord.Embed(title="🏆 قائمة المتصدرين (البوت الثاني)", description=description, color=discord.Color.purple())
     await ctx.send(embed=embed)
@@ -192,7 +196,7 @@ async def reset_points(ctx, member: discord.Member = None):
     if ctx.channel.id not in ALLOWED_CHANNEL_IDS:
         return
     if not has_reset_permission(ctx.author):
-        await ctx.send("❌ ليس لديك صلاحية لإجراء التصفير.")
+        await ctx.send("❌ ليس لديك صلاحية لإجراء التصفير (هذا الأمر مخصص للمالك والنائب فقط).")
         return
 
     async with aiosqlite.connect(DB_NAME) as db:
