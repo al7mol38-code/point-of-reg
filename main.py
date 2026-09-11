@@ -4,9 +4,6 @@ import aiosqlite
 import discord
 from discord.ext import commands
 
-# =========================
-# إعدادات الرتب للبوت الثاني
-# =========================
 OWNER_ROLE_ID = 1533463569683845160
 CO_OWNER_ROLE_ID = 1533463570564649121
 NEW_ROLE_ID = 1533463593201307780
@@ -76,13 +73,17 @@ async def on_message(message: discord.Message):
 
     content = message.content.strip()
 
-    # العمليات بواسطة الرد (Reply)
+    # إذا كانت الرسالة أمراً يبدأ بـ #، نتركه لمعالج الأوامر ونخرج فوراً لمنع التداخل
+    if content.startswith("#"):
+        await bot.process_commands(message)
+        return
+
+    # معالجة الردود (Replies) فقط
     if message.reference:
         try:
             referenced_msg = await message.channel.fetch_message(message.reference.message_id)
             target_member = referenced_msg.author
         except Exception:
-            await bot.process_commands(message)
             return
 
         if target_member.bot and (content == "نقاط" or re.search(r"^نقاط\s*[\+\-]\d+$", content)):
@@ -119,9 +120,6 @@ async def on_message(message: discord.Message):
             )
             await message.reply(embed=embed, mention_author=False)
             return
-
-    # معالجة الأوامر الرسمية مرة واحدة فقط وبدون تداخل
-    await bot.process_commands(message)
 
 @bot.command(name="مساعدة")
 async def help_command(ctx):
