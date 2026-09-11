@@ -19,7 +19,7 @@ ALLOWED_CHANNEL_IDS = {
     1533607940228120707
 }
 
-DB_NAME = "points_bot2.db"
+DB_NAME = "reg_point.db"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -30,7 +30,7 @@ bot = commands.Bot(command_prefix="#", intents=intents, help_command=None)
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
-            CREATE TABLE IF NOT EXISTS points_bot2 (
+            CREATE TABLE IF NOT EXISTS reg_point (
                 user_id TEXT PRIMARY KEY,
                 points INTEGER DEFAULT 0
             )
@@ -39,14 +39,14 @@ async def init_db():
 
 async def get_points(user_id: int) -> int:
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT points FROM points_bot2 WHERE user_id = ?", (str(user_id),)) as cursor:
+        async with db.execute("SELECT points FROM reg_point WHERE user_id = ?", (str(user_id),)) as cursor:
             row = await cursor.fetchone()
             return row[0] if row else 0
 
 async def set_points(user_id: int, points: int):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
-            INSERT INTO points_bot2 (user_id, points)
+            INSERT INTO reg_point (user_id, points)
             VALUES (?, ?)
             ON CONFLICT(user_id) DO UPDATE SET points = excluded.points
         """, (str(user_id), points))
@@ -61,7 +61,7 @@ def has_reset_permission(member: discord.Member) -> bool:
 @bot.event
 async def on_ready():
     await init_db()
-    print(f"✅ تم تشغيل البوت الثاني بنجاح باسم: {bot.user}")
+    print(f"✅ تم تشغيل reg point بنجاح باسم: {bot.user}")
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -73,12 +73,10 @@ async def on_message(message: discord.Message):
 
     content = message.content.strip()
 
-    # إذا كانت الرسالة أمراً يبدأ بـ #، نتركه لمعالج الأوامر ونخرج فوراً لمنع التداخل
     if content.startswith("#"):
         await bot.process_commands(message)
         return
 
-    # معالجة الردود (Replies) فقط
     if message.reference:
         try:
             referenced_msg = await message.channel.fetch_message(message.reference.message_id)
@@ -126,7 +124,7 @@ async def help_command(ctx):
     if ctx.channel.id not in ALLOWED_CHANNEL_IDS:
         return
     embed = discord.Embed(
-        title="📋 قائمة أوامر البوت الثاني",
+        title="📋 قائمة أوامر reg point",
         description=(
             "**بالرد على العضو:**\n"
             "• `نقاط` ➜ عرض النقاط مع المنشن\n"
@@ -146,11 +144,11 @@ async def top(ctx):
     if ctx.channel.id not in ALLOWED_CHANNEL_IDS:
         return
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT user_id, points FROM points_bot2 ORDER BY points DESC LIMIT 10") as cursor:
+        async with db.execute("SELECT user_id, points FROM reg_point ORDER BY points DESC LIMIT 10") as cursor:
             users = await cursor.fetchall()
 
     if not users:
-        await ctx.send("📭 لا توجد نقاط مسجلة في قاعدة هذا البوت.")
+        await ctx.send("📭 لا توجد نقاط مسجلة في قاعدة بيانات reg point.")
         return
 
     description = ""
@@ -160,7 +158,7 @@ async def top(ctx):
         medal = "🥇" if index == 1 else "🥈" if index == 2 else "🥉" if index == 3 else f"**{index}.**"
         description += f"{medal} {mention_name} — ⭐ **{points}** نقطة\n"
 
-    embed = discord.Embed(title="🏆 قائمة المتصدرين (البوت الثاني)", description=description, color=discord.Color.purple())
+    embed = discord.Embed(title="🏆 قائمة المتصدرين (reg point)", description=description, color=discord.Color.purple())
     await ctx.send(embed=embed)
 
 @bot.command(name="مسح")
@@ -176,9 +174,9 @@ async def reset_points(ctx, member: discord.Member = None):
             await set_points(member.id, 0)
             await ctx.send(f"🔄 تم تصفير نقاط {member.mention} بنجاح!")
         else:
-            await db.execute("DELETE FROM points_bot2")
+            await db.execute("DELETE FROM reg_point")
             await db.commit()
-            await ctx.send("⚠️ **تم تصفير جميع نقاط البوت الثاني بنجاح!**")
+            await ctx.send("⚠️ **تم تصفير جميع نقاط reg point بنجاح!**")
 
 if __name__ == "__main__":
     token = os.getenv("DISCORD_TOKEN_BOT2")
