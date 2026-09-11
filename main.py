@@ -19,7 +19,8 @@ ALLOWED_CHANNEL_IDS = {
     1533607940228120707
 }
 
-DB_NAME = "reg_point.db"
+# تم إرجاع اسم قاعدة البيانات القديمة لاستعادة النقاط المحفوظة
+DB_NAME = "points_bot2.db"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -30,7 +31,7 @@ bot = commands.Bot(command_prefix="#", intents=intents, help_command=None)
 async def init_db():
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
-            CREATE TABLE IF NOT EXISTS reg_point (
+            CREATE TABLE IF NOT EXISTS points_bot2 (
                 user_id TEXT PRIMARY KEY,
                 points INTEGER DEFAULT 0
             )
@@ -39,14 +40,14 @@ async def init_db():
 
 async def get_points(user_id: int) -> int:
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT points FROM reg_point WHERE user_id = ?", (str(user_id),)) as cursor:
+        async with db.execute("SELECT points FROM points_bot2 WHERE user_id = ?", (str(user_id),)) as cursor:
             row = await cursor.fetchone()
             return row[0] if row else 0
 
 async def set_points(user_id: int, points: int):
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
-            INSERT INTO reg_point (user_id, points)
+            INSERT INTO points_bot2 (user_id, points)
             VALUES (?, ?)
             ON CONFLICT(user_id) DO UPDATE SET points = excluded.points
         """, (str(user_id), points))
@@ -73,10 +74,12 @@ async def on_message(message: discord.Message):
 
     content = message.content.strip()
 
+    # معالجة أوامر البوت فقط إذا بدأت بـ # والخروج فوراً لمنع التداخل والرد المزدوج
     if content.startswith("#"):
         await bot.process_commands(message)
         return
 
+    # معالجة الردود (Replies) للأعضاء
     if message.reference:
         try:
             referenced_msg = await message.channel.fetch_message(message.reference.message_id)
@@ -144,7 +147,7 @@ async def top(ctx):
     if ctx.channel.id not in ALLOWED_CHANNEL_IDS:
         return
     async with aiosqlite.connect(DB_NAME) as db:
-        async with db.execute("SELECT user_id, points FROM reg_point ORDER BY points DESC LIMIT 10") as cursor:
+        async with db.execute("SELECT user_id, points FROM points_bot2 ORDER BY points DESC LIMIT 10") as cursor:
             users = await cursor.fetchall()
 
     if not users:
@@ -174,7 +177,7 @@ async def reset_points(ctx, member: discord.Member = None):
             await set_points(member.id, 0)
             await ctx.send(f"🔄 تم تصفير نقاط {member.mention} بنجاح!")
         else:
-            await db.execute("DELETE FROM reg_point")
+            await db.execute("DELETE FROM points_bot2")
             await db.commit()
             await ctx.send("⚠️ **تم تصفير جميع نقاط reg point بنجاح!**")
 
