@@ -19,7 +19,8 @@ ALLOWED_CHANNEL_IDS = {
     1533607940228120707
 }
 
-DB_NAME = "points_bot2.db"
+# مسار القرص الدائم المطلق
+DB_NAME = "/data/points_bot2.db"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -28,6 +29,7 @@ intents.members = True
 bot = commands.Bot(command_prefix="#", intents=intents, help_command=None)
 
 async def init_db():
+    os.makedirs("/data", exist_ok=True)
     async with aiosqlite.connect(DB_NAME) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS points_bot2 (
