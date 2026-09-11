@@ -19,7 +19,6 @@ ALLOWED_CHANNEL_IDS = {
     1533607940228120707
 }
 
-# تم إرجاع اسم قاعدة البيانات القديمة لاستعادة النقاط المحفوظة
 DB_NAME = "points_bot2.db"
 
 intents = discord.Intents.default()
@@ -65,6 +64,13 @@ async def on_ready():
     print(f"✅ تم تشغيل reg point بنجاح باسم: {bot.user}")
 
 @bot.event
+async def on_command_error(ctx, error):
+    # تجاهل الأوامر غير الموجودة تماماً لمنع حدوث تكرار أو أخطاء في السجلات
+    if isinstance(error, commands.CommandNotFound):
+        return
+    raise error
+
+@bot.event
 async def on_message(message: discord.Message):
     if message.author.bot:
         return
@@ -74,12 +80,10 @@ async def on_message(message: discord.Message):
 
     content = message.content.strip()
 
-    # معالجة أوامر البوت فقط إذا بدأت بـ # والخروج فوراً لمنع التداخل والرد المزدوج
     if content.startswith("#"):
         await bot.process_commands(message)
         return
 
-    # معالجة الردود (Replies) للأعضاء
     if message.reference:
         try:
             referenced_msg = await message.channel.fetch_message(message.reference.message_id)
